@@ -78,7 +78,6 @@ async function dumpChannelIds() {
             process.exit();
         };
     }while(channelsList===null);
-
     let channels = channelsList.replaceAll(`\r`,``).split(`\n`);
 
     if(!fs.existsSync(`./messages`)){
@@ -120,7 +119,7 @@ async function dumpAll(){
         process.exit();
     };
 
-    let channelFolders = await readdir(`./messages`);
+    let channelFolders = await fsPromises.readdir(`./messages`);
 
     let allMessages = {};
 
