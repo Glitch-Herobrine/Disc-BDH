@@ -71,7 +71,7 @@ async function dumpChannelIds() {
         };
 
         try{
-            channelsList = await fsPromises.readFileSync(`./${channelsListFN}`,'utf-8');
+            channelsList = await fsPromises.readFile(`./${channelsListFN}`,'utf-8');
         }catch(err){
             console.log(`Error occured while getting the channels list: ${err}`);
             await wait(2000);
