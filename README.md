@@ -4,7 +4,7 @@
 
 ## ✅ How to Use
 
-1. **Download and place the `.exe` file** in a **new folder**.
+1. **Extract the downloaded .zip file into a new folder.**
 
 2. In the same folder, add your `messages` folder from your **Discord data export**.
    👉 [Learn how to request your Discord data](https://support.discord.com/hc/en-us/articles/360004027692-Requesting-a-Copy-of-your-Data)
