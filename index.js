@@ -133,7 +133,7 @@ async function dumpAll(){
 
     const csvData = await parseCSV(allMessages);
     try{
-        await fs.writeFileSync(`./messages.csv`,csvData);
+        await fsPromises.writeFile(`./messages.csv`,csvData);
     }catch(err){
         console.log(chalk.red(`An error occured: ${err}`));
         await wait(3000);
