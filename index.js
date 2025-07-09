@@ -1,5 +1,6 @@
 const readline = require('node:readline');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const chalk = require('chalk');
 const JSONbig = require('json-bigint');
 const process = require('node:process');
@@ -19,23 +20,12 @@ function ask(question){
     });
 };
 
-function readdir(path){
-    return new Promise((resolve,reject)=>{
-        fs.readdir(path,(err,files)=>{
-            if(err){
-                reject(err);
-            }else{
-                resolve(files);
-            };
-        });
-    });
-};
 
 async function parseChannel(channel) {
     let messages = [];
     let messagesjson;
     try{
-        messagesjson = await fs.readFileSync(`./messages/${channel}/messages.json`);
+        messagesjson = await fsPromises.readFile(`./messages/${channel}/messages.json`);
     }catch(err){
         return null;
     };
@@ -73,7 +63,7 @@ async function dumpChannelIds() {
     do{
         const channelsListFN = await ask(chalk.white("Enter the file that contains the list of channel ids.\n> "));
 
-        let exists = await fs.existsSync(`./${channelsListFN}`);
+        let exists = fs.existsSync(`./${channelsListFN}`);
 
         if(!exists){
             console.log("The filename you provied doesn't exist.");
@@ -81,7 +71,7 @@ async function dumpChannelIds() {
         };
 
         try{
-            channelsList = await fs.readFileSync(`./${channelsListFN}`,'utf-8');
+            channelsList = await fsPromises.readFileSync(`./${channelsListFN}`,'utf-8');
         }catch(err){
             console.log(`Error occured while getting the channels list: ${err}`);
             await wait(2000);
@@ -94,10 +84,10 @@ async function dumpChannelIds() {
     if(!fs.existsSync(`./messages`)){
         console.log(`Messages folder is not found. Make sure your messages folder is named "messages".`);
         await wait(2000);
-        process.quit();
+        process.exit();
     };
 
-    let channelFolders = await readdir(`./messages`);
+    let channelFolders = await fsPromises.readdir(`./messages`);
 
     let allMessages = {};
 
@@ -115,7 +105,7 @@ async function dumpChannelIds() {
     console.log(chalk.green(`Dump complete!`));
     const csvData = await parseCSV(allMessages);
     try{
-        await fs.writeFileSync(`./messages.csv`,csvData);
+        await fsPromises.writeFile(`./messages.csv`,csvData);
     }catch(err){
         console.log(chalk.red(`An error occured: ${err}`));
         await wait(3000);
