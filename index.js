@@ -51,11 +51,7 @@ async function parseCSV(allMessages) {
 };
 
 async function  wait(ms) {
-    return new Promise((resolve,reject) => {
-        setTimeout(() => {
-            resolve();
-        }, ms);
-    });
+    return new Promise((resolve,reject) => setTimeout(() => {resolve();}, ms));
 };
 
 async function dumpChannelIds() {
@@ -91,7 +87,8 @@ async function dumpChannelIds() {
     let allMessages = {};
 
     for(const channel of channelFolders){
-        let channelId = String(channel).replace(`c`,``);
+        let chanStr = String(channel);
+        let channelId = chanStr.startsWith("c")?chanStr.slice(1):chanStr;
 
         if(channels.includes(channelId)){
             let parsedData = await parseChannel(channel);
@@ -124,7 +121,8 @@ async function dumpAll(){
     let allMessages = {};
 
     for(const channelFolder of channelFolders){
-        let channelId = String(channelFolder).replace("c","");
+        let chanStr = String(channel);
+        let channelId = chanStr.startsWith("c")?chanStr.slice(1):chanStr;
         let parsedData = await parseChannel(channelFolder);
         if(parsedData !== null){
             allMessages[channelId] = parsedData;
