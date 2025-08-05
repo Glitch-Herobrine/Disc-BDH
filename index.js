@@ -1,11 +1,21 @@
-const readline = require('node:readline');
+//const readline = require('node:readline');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const chalk = require('chalk');
 const JSONbig = require('json-bigint');
 const process = require('node:process');
 const inquirer = require('inquirer');
+const { json } = require('node:stream/consumers');
+const cliVersion = require('./package.json').version;
+
 const prompt = inquirer.createPromptModule();
+const defaultSettings = {
+    messagesFolder:"messages",
+    defaultChannelsTxtEnabled:false,
+    defaultChannelsTxt:''
+}
+
+let settings;
 
 function extractChannelId(chanStr){
     return chanStr.startsWith("c")?chanStr.slice(1):chanStr;
@@ -15,7 +25,7 @@ async function parseChannel(channel) {
     let messages = [];
     let messagesjson;
     try{
-        messagesjson = await fsPromises.readFile(`./messages/${channel}/messages.json`);
+        messagesjson = await fsPromises.readFile(`./${settings["messagesFolder"]}/${channel}/messages.json`);
     }catch(err){
         return null;
     }
@@ -46,16 +56,20 @@ function wait(ms) {
 async function dumpChannelIds() {
     const allFilesInDir = await fsPromises.readdir('./');
     const txtFiles = allFilesInDir.filter((val) => val.endsWith(".txt"));
-    const channelsListPrompt = await prompt([
-        {
-            type: 'list',
-            name: "filename",
-            message:chalk.white("Select the .txt file that contains the list of channel IDs."),
-            choices:txtFiles
-        }
-    ]);
-
-    const channelsListFN = channelsListPrompt.filename;
+    let channelsListFN;
+    if(settings["defaultChannelsTxtEnabled"]===false){
+        const channelsListPrompt = await prompt([
+            {
+                type: 'list',
+                name: "filename",
+                message:chalk.white("Select the .txt file that contains the list of channel IDs."),
+                choices:txtFiles
+            }
+        ]);
+        channelsListFN = channelsListPrompt.filename;
+    }else{
+        channelsListFN = settings["defaultChannelsTxt"];
+    }
 
     let exists = fs.existsSync(`./${channelsListFN}`);
 
@@ -77,13 +91,13 @@ async function dumpChannelIds() {
 
     let channels = channelsList.split(/\r?\n/).filter(line => line.trim() !== "");
 
-    if(!fs.existsSync(`./messages`)){
-        console.log(`Messages folder is not found. Make sure your messages folder is named "messages".`);
+    if(!fs.existsSync(`./${settings["messagesFolder"]}`)){
+        console.log(`Messages folder is not found. Make sure your messages folder is named "${settings["messagesFolder"]||"messages"}".`);
         await wait(2000);
         process.exit();
     }
 
-    let channelFolders = await fsPromises.readdir(`./messages`);
+    let channelFolders = await fsPromises.readdir(`./${settings["messagesFolder"]}`);
 
     let allMessages = {};
 
@@ -104,6 +118,7 @@ async function dumpChannelIds() {
 
     try{
         await fsPromises.writeFile(`./messages.csv`,csvData);
+        process.exit(0);
     }catch(err){
         console.log(chalk.red(`An error occurred: ${err}`));
         await wait(3000);
@@ -112,13 +127,13 @@ async function dumpChannelIds() {
 };
 
 async function dumpAll(){
-    if(!fs.existsSync(`./messages`)){
-        console.log(`Messages folder is not found. Make sure your messages folder is named "messages".`);
+    if(!fs.existsSync(settings["messagesFolder"])){
+        console.log(`Messages folder is not found. Make sure your messages folder is named "${settings["messagesFolder"]}".`);
         await wait(3000);
         process.exit();
     }
 
-    let channelFolders = await fsPromises.readdir(`./messages`);
+    let channelFolders = await fsPromises.readdir(`./${settings["messagesFolder"]}`);
 
     let allMessages = {};
     
@@ -135,45 +150,223 @@ async function dumpAll(){
     try{
         await fsPromises.writeFile(`./messages.csv`,csvData);
     }catch(err){
-        console.log(chalk.red(`An error occured: ${err}`));
+        console.log(chalk.red(`An error occurred: ${err}`));
         await wait(3000);
         process.exit(1);
     }
     console.log(chalk.green(`Dump complete!`));
     await wait(1000);
+    process.exit(0);
 };
 
-(async () => {
-    let option = null;
-
-    do{
-        const optionans = await prompt([
-            {
-                type:"list",
-                name:"action",
-                message:chalk.white("Please enter the action you want to do."),
-                choices:[
-                    {name: "1: Dump All Messages", value: 1},
-                    {name: "2: Dump from Channel Ids", value: 2},
-                ]
-            }
-        ]);
-
-        option = optionans.action;
-
-        switch(option){
-            case 1:
-                await dumpAll();
-                break;
-            case 2:
-                await dumpChannelIds();
-                break;
-            default:
-                option = null;
-                console.log("Invalid option.");
-                break;
+async function ctSettingsMenu() {
+    const {ctSetting} = await prompt(
+    [
+        {
+            type:'list',
+            name:"ctSetting",
+            message:chalk.white(`Channels Text File Settings`),
+            choices:[
+                {
+                    name:`[*] Default Channels Text Filename Enabled: ${settings["defaultChannelsTxtEnabled"]?"Yes":"No"}`,
+                    value:1,
+                },
+                {
+                    name:`[*] Default Channels Text File Name: "${settings['defaultChannelsTxt']}"`,
+                    value:2,
+                },
+                                            {
+                    name:`[*] Go Back`,
+                    value:3,
+                }
+            ]
         }
-    }while(option===null);
+    ]
+);
+
+switch (ctSetting){
+    case 1:
+        const {dctEnabled} = await prompt(
+            [
+                {
+                    name: "dctEnabled",
+                    type: "confirm",
+                    message: chalk.white(`Default Channels Filename Enabled?\n${chalk.cyan(`>`)}`)
+                }
+            ]
+        );
+
+        settings["defaultChannelsTxtEnabled"] = dctEnabled;
+
+        await ctSettingsMenu();
+
+        break;
+    case 2:
+        const {dctName} = await prompt(
+            [
+                {
+                    name: "dctName",
+                    type: "input",
+                    message: chalk.white(`Default Channels Text File Name:\n${chalk.cyan(`>`)}`)
+                }
+            ]
+        );
+
+        settings['defaultChannelsTxt'] = dctName;
+
+        await ctSettingsMenu();
+
+        break;
+    case 3:
+        await settingsMenu();
+
+        break;
+}
+}
+async function settingsMenu(){
+
+    const {setting} = await prompt([
+        {
+            type:"list",
+            name:"setting",
+            message:chalk.white("Settings:"),
+            choices:[
+                {
+                    name:`[*] Save Settings`,
+                    value:3
+                },
+                {
+                    name:`[*] Messages Folder Name: "${settings.messagesFolder}"`,
+                    value:1
+                },
+                {
+                    name:`[*] Default Channels Text Filename Settings`,
+                    value:2
+                },
+                {
+                    name:`[*] Factory Reset Settings`,
+                    value:5,
+                },
+                {
+                    name:`[*] Exit Settings Menu`,
+                    value:4,
+                },
+            ]
+        }
+    ]);
+    
+    switch(setting){
+        case 1:
+            const {newName} = await prompt(
+                [
+                    {
+                        type:"input",
+                        name:"newName",
+                        message:chalk.white(`Please enter the new name of the messages folder.\n${chalk.cyan(`>`)}`)
+                    }
+                ]
+            );
+
+            settings["messagesFolder"] = newName;
+
+            await settingsMenu();
+
+            break;
+        case 2:
+            await ctSettingsMenu();
+            break;
+        case 3:
+            await saveSettings("settingsMenu");
+            await settingsMenu();
+            break;
+        case 4:
+            await startupMenu();
+            break;
+        case 5:
+            const {confirmation} = await prompt([
+                {
+                    type:"confirm",
+                    message:`${chalk.red(`Are you sure?`)}\n${chalk.cyan(`>`)}`,
+                    default:false,
+                    name:"confirmation"
+                }
+            ]);
+
+            if(confirmation === true){
+                settings = defaultSettings;
+                console.log(chalk.green("Success!"));
+                await saveSettings();
+                await settingsMenu();
+            }
+            break;
+        default:
+            console.log("Please pick a valid option.");
+            await settingsMenu();
+            break;
+    }
+}
+
+async function startupMenu() {
+    console.log(chalk.blue(`Disc-BDH v${cliVersion}`));
+    const optionans = await prompt([
+        {
+            type:"list",
+            name:"action",
+            message:chalk.white("Please enter the action you want to do."),
+            choices:[
+                {name: "[1]: Dump All Messages", value: 1},
+                {name: "[2]: Dump from Channel Ids", value: 2},
+                {name: "[3]: Settings", value: 3},
+            ]
+        }
+    ]);
+
+    const option = optionans.action;
+
+    switch(option){
+        case 1:
+            await dumpAll();
+            break;
+        case 2:
+            await dumpChannelIds();
+            break;
+        case 3:
+            await settingsMenu();
+            break;
+        default:
+            console.log("Invalid option.");
+            await startupMenu();
+            break;
+    }
+}
+
+function saveSettings(context){
+    return new Promise((resolve,reject) => {
+        try{
+            fs.writeFileSync("./settings.json",JSON.stringify(settings,null,2),{encoding:"utf-8"});
+            if(context==="settingsMenu"){
+                console.log(chalk.green("✅ Settings saved successfully."));
+            }
+            resolve();
+        }catch(err){
+            console.log(`Error occurred: ${err}`);
+            reject();
+        }
+    })
+}
+process.on("exit", saveSettings);
+
+process.on("SIGINT", saveSettings);
+
+(async () => {
+    try{
+        let Readensettings = await fsPromises.readFile("./settings.json",'utf-8');
+        Readensettings = JSON.parse(Readensettings);
+        settings = Readensettings;
+    }catch(err){
+        settings = defaultSettings;
+    }
+    await startupMenu();
 })();
 
 module.exports = {
