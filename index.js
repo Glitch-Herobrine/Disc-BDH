@@ -50,7 +50,7 @@ async function dumpChannelIds() {
         {
             type: 'list',
             name: "filename",
-            message:chalk.white("Enter the file that contains the list of channel ids."),
+            message:chalk.white("Select the .txt file that contains the list of channel IDs."),
             choices:txtFiles
         }
     ])
