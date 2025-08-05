@@ -53,7 +53,7 @@ async function dumpChannelIds() {
             message:chalk.white("Select the .txt file that contains the list of channel IDs."),
             choices:txtFiles
         }
-    ])
+    ]);
 
     const channelsListFN = channelsListPrompt.filename;
 
