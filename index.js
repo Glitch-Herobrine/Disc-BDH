@@ -5,7 +5,6 @@ const chalk = require('chalk');
 const JSONbig = require('json-bigint');
 const process = require('node:process');
 const inquirer = require('inquirer');
-const { json } = require('node:stream/consumers');
 const cliVersion = require('./package.json').version;
 
 const prompt = inquirer.createPromptModule();
