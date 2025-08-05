@@ -367,8 +367,3 @@ process.on("SIGINT", saveSettings);
     }
     await startupMenu();
 })();
-
-module.exports = {
-    dumpAll,
-    dumpChannelIds
-};
