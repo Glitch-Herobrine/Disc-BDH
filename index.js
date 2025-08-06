@@ -353,9 +353,13 @@ function saveSettings(context){
         }
     })
 }
-process.on("exit", saveSettings);
 
-process.on("SIGINT", saveSettings);
+//process.on("exit", saveSettings);
+
+process.on("SIGINT", async () => {
+    await saveSettings();
+    process.exit();
+});
 
 (async () => {
     try{
